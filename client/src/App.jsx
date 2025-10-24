@@ -80,6 +80,12 @@ function App() {
         >
           Factures
         </button>
+        <button
+          className={currentView === 'settings' ? 'active' : ''}
+          onClick={() => setCurrentView('settings')}
+        >
+          Paramètres
+        </button>
       </nav>
 
       <div className="container">
@@ -118,6 +124,13 @@ function App() {
             clients={clients}
             products={products}
             onUpdate={loadData}
+            onSuccess={showSuccess}
+            onError={showError}
+          />
+        )}
+
+        {currentView === 'settings' && (
+          <SettingsView
             onSuccess={showSuccess}
             onError={showError}
           />
@@ -996,6 +1009,524 @@ function InvoicesView({ invoices, clients, products, onUpdate, onSuccess, onErro
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function SettingsView({ onSuccess, onError }) {
+  const [settings, setSettings] = useState({
+    company_name: '',
+    company_address: '',
+    company_city: '',
+    company_postal_code: '',
+    company_country: '',
+    company_phone: '',
+    company_email: '',
+    company_website: '',
+    company_siret: '',
+    company_tax_id: '',
+    company_capital: '',
+    company_legal_form: '',
+    company_rcs: '',
+    bank_name: '',
+    bank_iban: '',
+    bank_bic: '',
+    terms_and_conditions: '',
+    invoice_footer: '',
+    invoice_prefix: '',
+    default_tax_rate: 20.0,
+    default_payment_terms: 30,
+    late_penalty_rate: 10.0,
+    recovery_fee: 40.0,
+    early_payment_discount: 0,
+    legal_mentions: '',
+    logo_path: null,
+    signature_path: null
+  })
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch(`${API_URL}/settings`)
+      const data = await response.json()
+      setSettings({ ...settings, ...data })
+    } catch (err) {
+      onError('Erreur lors du chargement des paramètres')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch(`${API_URL}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+
+      if (response.ok) {
+        onSuccess('Paramètres mis à jour avec succès')
+      } else {
+        onError('Erreur lors de la mise à jour')
+      }
+    } catch (err) {
+      onError('Erreur de connexion')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('logo', file)
+
+    setUploading(true)
+    try {
+      const response = await fetch(`${API_URL}/settings/logo`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSettings({ ...settings, logo_path: data.logo_path })
+        onSuccess('Logo uploadé avec succès')
+      } else {
+        onError('Erreur lors de l\'upload du logo')
+      }
+    } catch (err) {
+      onError('Erreur de connexion')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleLogoDelete = async () => {
+    if (!confirm('Voulez-vous vraiment supprimer le logo ?')) return
+
+    try {
+      const response = await fetch(`${API_URL}/settings/logo`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setSettings({ ...settings, logo_path: null })
+        onSuccess('Logo supprimé')
+      } else {
+        onError('Erreur lors de la suppression')
+      }
+    } catch (err) {
+      onError('Erreur de connexion')
+    }
+  }
+
+  const handleSignatureUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('signature', file)
+
+    setUploading(true)
+    try {
+      const response = await fetch(`${API_URL}/settings/signature`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSettings({ ...settings, signature_path: data.signature_path })
+        onSuccess('Signature uploadée avec succès')
+      } else {
+        onError('Erreur lors de l\'upload de la signature')
+      }
+    } catch (err) {
+      onError('Erreur de connexion')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSignatureDelete = async () => {
+    if (!confirm('Voulez-vous vraiment supprimer la signature ?')) return
+
+    try {
+      const response = await fetch(`${API_URL}/settings/signature`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setSettings({ ...settings, signature_path: null })
+        onSuccess('Signature supprimée')
+      } else {
+        onError('Erreur lors de la suppression')
+      }
+    } catch (err) {
+      onError('Erreur de connexion')
+    }
+  }
+
+  if (loading) {
+    return <div className="section">Chargement...</div>
+  }
+
+  return (
+    <div className="section">
+      <h2>Paramètres de l'entreprise</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: 'grid', gap: '2rem' }}>
+
+          {/* Section Logo et Signature */}
+          <div className="card">
+            <h3>Logo et Signature de l'entreprise</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1rem' }}>
+              {/* Logo */}
+              <div>
+                <h4 style={{ marginBottom: '1rem', fontSize: '1rem', color: '#666' }}>Logo</h4>
+                {settings.logo_path && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <img
+                      src={settings.logo_path}
+                      alt="Logo"
+                      style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', border: '1px solid #ddd', padding: '0.5rem', borderRadius: '4px' }}
+                    />
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={handleLogoDelete}
+                      >
+                        Supprimer le logo
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Changer le logo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={uploading}
+                  />
+                  <small>Formats acceptés : JPEG, PNG, GIF, SVG (max 5MB)</small>
+                </div>
+              </div>
+
+              {/* Signature / Cachet */}
+              <div>
+                <h4 style={{ marginBottom: '1rem', fontSize: '1rem', color: '#666' }}>Signature / Cachet</h4>
+                {settings.signature_path && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <img
+                      src={settings.signature_path}
+                      alt="Signature"
+                      style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain', border: '1px solid #ddd', padding: '0.5rem', borderRadius: '4px' }}
+                    />
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={handleSignatureDelete}
+                      >
+                        Supprimer la signature
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Changer la signature / cachet</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleSignatureUpload}
+                    disabled={uploading}
+                  />
+                  <small>Apparaîtra en bas des factures</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Informations de l'entreprise */}
+          <div className="card">
+            <h3>Informations de l'entreprise</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group">
+                <label>Nom de l'entreprise</label>
+                <input
+                  type="text"
+                  value={settings.company_name || ''}
+                  onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Téléphone</label>
+                <input
+                  type="text"
+                  value={settings.company_phone || ''}
+                  onChange={(e) => setSettings({ ...settings, company_phone: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={settings.company_email || ''}
+                  onChange={(e) => setSettings({ ...settings, company_email: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Site web</label>
+                <input
+                  type="text"
+                  value={settings.company_website || ''}
+                  onChange={(e) => setSettings({ ...settings, company_website: e.target.value })}
+                />
+              </div>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Adresse</label>
+                <input
+                  type="text"
+                  value={settings.company_address || ''}
+                  onChange={(e) => setSettings({ ...settings, company_address: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Ville</label>
+                <input
+                  type="text"
+                  value={settings.company_city || ''}
+                  onChange={(e) => setSettings({ ...settings, company_city: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Code postal</label>
+                <input
+                  type="text"
+                  value={settings.company_postal_code || ''}
+                  onChange={(e) => setSettings({ ...settings, company_postal_code: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Pays</label>
+                <input
+                  type="text"
+                  value={settings.company_country || ''}
+                  onChange={(e) => setSettings({ ...settings, company_country: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Forme juridique</label>
+                <input
+                  type="text"
+                  value={settings.company_legal_form || ''}
+                  onChange={(e) => setSettings({ ...settings, company_legal_form: e.target.value })}
+                  placeholder="SARL, SAS, EURL, etc."
+                />
+              </div>
+              <div className="form-group">
+                <label>Capital social</label>
+                <input
+                  type="text"
+                  value={settings.company_capital || ''}
+                  onChange={(e) => setSettings({ ...settings, company_capital: e.target.value })}
+                  placeholder="10000 €"
+                />
+              </div>
+              <div className="form-group">
+                <label>SIRET</label>
+                <input
+                  type="text"
+                  value={settings.company_siret || ''}
+                  onChange={(e) => setSettings({ ...settings, company_siret: e.target.value })}
+                  placeholder="123 456 789 00012"
+                />
+              </div>
+              <div className="form-group">
+                <label>Numéro de TVA</label>
+                <input
+                  type="text"
+                  value={settings.company_tax_id || ''}
+                  onChange={(e) => setSettings({ ...settings, company_tax_id: e.target.value })}
+                  placeholder="FR12345678901"
+                />
+              </div>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>RCS</label>
+                <input
+                  type="text"
+                  value={settings.company_rcs || ''}
+                  onChange={(e) => setSettings({ ...settings, company_rcs: e.target.value })}
+                  placeholder="RCS Paris B 123 456 789"
+                />
+                <small>Registre du Commerce et des Sociétés</small>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Coordonnées bancaires */}
+          <div className="card">
+            <h3>Coordonnées bancaires</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Nom de la banque</label>
+                <input
+                  type="text"
+                  value={settings.bank_name || ''}
+                  onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>IBAN</label>
+                <input
+                  type="text"
+                  value={settings.bank_iban || ''}
+                  onChange={(e) => setSettings({ ...settings, bank_iban: e.target.value })}
+                  placeholder="FR76 1234 5678 9012 3456 7890 123"
+                />
+              </div>
+              <div className="form-group">
+                <label>BIC / SWIFT</label>
+                <input
+                  type="text"
+                  value={settings.bank_bic || ''}
+                  onChange={(e) => setSettings({ ...settings, bank_bic: e.target.value })}
+                  placeholder="BNPAFRPPXXX"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Paramètres de facturation */}
+          <div className="card">
+            <h3>Paramètres de facturation</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group">
+                <label>Préfixe des factures</label>
+                <input
+                  type="text"
+                  value={settings.invoice_prefix || ''}
+                  onChange={(e) => setSettings({ ...settings, invoice_prefix: e.target.value })}
+                  placeholder="FACT-"
+                />
+                <small>Exemple : FACT-2024-001</small>
+              </div>
+              <div className="form-group">
+                <label>Taux de TVA par défaut (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settings.default_tax_rate || ''}
+                  onChange={(e) => setSettings({ ...settings, default_tax_rate: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Délai de paiement (jours)</label>
+                <input
+                  type="number"
+                  value={settings.default_payment_terms || ''}
+                  onChange={(e) => setSettings({ ...settings, default_payment_terms: parseInt(e.target.value) })}
+                  placeholder="30"
+                />
+                <small>Délai de paiement par défaut</small>
+              </div>
+              <div className="form-group">
+                <label>Taux de pénalités de retard (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settings.late_penalty_rate || ''}
+                  onChange={(e) => setSettings({ ...settings, late_penalty_rate: parseFloat(e.target.value) })}
+                  placeholder="10"
+                />
+                <small>Généralement 3 fois le taux légal</small>
+              </div>
+              <div className="form-group">
+                <label>Indemnité forfaitaire de recouvrement (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settings.recovery_fee || ''}
+                  onChange={(e) => setSettings({ ...settings, recovery_fee: parseFloat(e.target.value) })}
+                  placeholder="40"
+                />
+                <small>Montant légal : 40 €</small>
+              </div>
+              <div className="form-group">
+                <label>Escompte paiement anticipé (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={settings.early_payment_discount || ''}
+                  onChange={(e) => setSettings({ ...settings, early_payment_discount: parseFloat(e.target.value) })}
+                  placeholder="0"
+                />
+                <small>Escompte si paiement anticipé</small>
+              </div>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Texte de pied de page</label>
+                <input
+                  type="text"
+                  value={settings.invoice_footer || ''}
+                  onChange={(e) => setSettings({ ...settings, invoice_footer: e.target.value })}
+                  placeholder="Merci pour votre confiance"
+                />
+                <small>Ce texte apparaîtra en bas de chaque facture</small>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Mentions légales */}
+          <div className="card">
+            <h3>Mentions légales obligatoires</h3>
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Mentions légales</label>
+              <textarea
+                value={settings.legal_mentions || ''}
+                onChange={(e) => setSettings({ ...settings, legal_mentions: e.target.value })}
+                rows="4"
+                placeholder="En cas de retard de paiement, seront exigibles..."
+              />
+              <small>Mentions légales obligatoires sur les factures (pénalités de retard, etc.)</small>
+            </div>
+          </div>
+
+          {/* Section Conditions de vente */}
+          <div className="card">
+            <h3>Conditions générales de vente</h3>
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>Conditions de vente</label>
+              <textarea
+                value={settings.terms_and_conditions || ''}
+                onChange={(e) => setSettings({ ...settings, terms_and_conditions: e.target.value })}
+                rows="8"
+                placeholder="Saisissez vos conditions générales de vente..."
+              />
+              <small>Ces conditions apparaîtront sur vos factures</small>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Enregistrement...' : 'Enregistrer les paramètres'}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   )
 }

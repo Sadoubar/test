@@ -10,6 +10,7 @@ const db = require('./database');
 const clientsRouter = require('./routes/clients');
 const productsRouter = require('./routes/products');
 const invoicesRouter = require('./routes/invoices');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,10 +23,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
+// Serve uploaded files (logos)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // API Routes
 app.use('/api/clients', clientsRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/invoices', invoicesRouter);
+app.use('/api/settings', settingsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
